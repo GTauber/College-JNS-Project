@@ -1,7 +1,6 @@
 package com.tauber.usercalculator.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.tauber.usercalculator.model.dto.AddressDTO;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,10 +28,12 @@ public class UserProfile {
     private Integer version;
 
     @CreatedDate
-    private LocalDateTime createdAt;
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @LastModifiedDate
-    private LocalDateTime updatedAt;
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     private String name;
 
@@ -40,7 +41,9 @@ public class UserProfile {
 
     private String tel;
 
+    private Long addressId;
+
     @Transient
-    private AddressDTO addressDTO;
+    private Address address;
 
 }

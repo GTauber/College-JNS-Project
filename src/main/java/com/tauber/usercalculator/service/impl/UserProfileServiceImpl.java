@@ -1,10 +1,12 @@
 package com.tauber.usercalculator.service.impl;
 
-import com.tauber.usercalculator.model.dto.AddressDTO;
+import com.tauber.usercalculator.model.dto.UserProfileDTO;
+import com.tauber.usercalculator.model.entity.Address;
 import com.tauber.usercalculator.model.entity.UserProfile;
-
+import com.tauber.usercalculator.repository.AddressRepository;
 import com.tauber.usercalculator.repository.UserProfileRepository;
 import com.tauber.usercalculator.service.UserProfileService;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -15,21 +17,27 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class UserProfileServiceImpl implements UserProfileService {
 
+    private final AddressRepository addressRepository;
+
     private final UserProfileRepository userProfileRepository;
     private final WebClient viaCepWebClient;
 
-    public UserProfileServiceImpl(UserProfileRepository userProfileRepository, @Qualifier("viaCepWebClient") WebClient viaCepWebClient) {
+    public UserProfileServiceImpl(UserProfileRepository userProfileRepository, @Qualifier("viaCepWebClient") WebClient viaCepWebClient,
+        AddressRepository addressRepository) {
         this.userProfileRepository = userProfileRepository;
         this.viaCepWebClient = viaCepWebClient;
+        this.addressRepository = addressRepository;
     }
 
+    //TODO When save address, see if it already exists. If it does, just save the user with the address id
     @Override
     public Mono<UserProfile> register(UserProfile userProfile) {
-        return this.findAddress(userProfile.getAddressDTO().getCep())
-            .flatMap(addressDTO -> {
-                log.info("Address found: {}", addressDTO);
-                userProfile.setAddressDTO(addressDTO);
-                log.info("Saving user profile: {}", userProfile);
+        return this.findAddress(userProfile.getAddress().getCep())
+            .doOnNext(address -> log.info("Address found: {}", address))
+            .flatMap(addressRepository::save)
+            .flatMap(address -> {
+                userProfile.setAddressId(address.getId());
+                userProfile.setAddress(address);
                 return userProfileRepository.save(userProfile);
             });
     }
@@ -39,11 +47,23 @@ public class UserProfileServiceImpl implements UserProfileService {
         return userProfileRepository.findById(id);
     }
 
-    private Mono<AddressDTO> findAddress(String cep) {
+    @Override
+    public Mono<UserProfile> updateUser(Long id, UserProfileDTO userProfileDTO) {
+        return userProfileRepository.findById(id)
+            .flatMap(userProfile -> {
+                userProfile.setName(Objects.requireNonNullElse(userProfileDTO.getName(), userProfile.getName()));
+                userProfile.setEmail(Objects.requireNonNullElse((userProfileDTO.getEmail()), userProfile.getEmail()));
+                userProfile.setTel(Objects.requireNonNullElse(userProfileDTO.getTel(), userProfile.getTel()));
+                return userProfileRepository.save(userProfile);
+            });
+    }
+
+    //TODO Move to address service
+    private Mono<Address> findAddress(String cep) {
         return viaCepWebClient.get()
             .uri(uriBuilder -> uriBuilder.path("/" + cep + "/json")
                 .build())
             .retrieve()
-            .bodyToMono(AddressDTO.class).log();
+            .bodyToMono(Address.class);
     }
 }
