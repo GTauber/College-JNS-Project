@@ -6,11 +6,13 @@ import com.tauber.usercalculator.model.entity.UserProfile;
 import com.tauber.usercalculator.repository.AddressRepository;
 import com.tauber.usercalculator.repository.UserProfileRepository;
 import com.tauber.usercalculator.service.UserProfileService;
+import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -56,6 +58,19 @@ public class UserProfileServiceImpl implements UserProfileService {
                 userProfile.setTel(Objects.requireNonNullElse(userProfileDTO.getTel(), userProfile.getTel()));
                 return userProfileRepository.save(userProfile);
             });
+    }
+
+    @Override
+    public Mono<Boolean> deleteUser(Long id) {
+        log.info("Deleting user by id {}", id);
+        return userProfileRepository.deleteUserById(id)
+            .map(deleted -> deleted == 1)
+            .doOnNext(deleted -> log.info("User deleted: {}", deleted));
+    }
+
+    @Override
+    public Flux<UserProfile> findUsersByIds(List<Long> userIds) {
+        return userProfileRepository.findUsersById(userIds);
     }
 
     //TODO Move to address service

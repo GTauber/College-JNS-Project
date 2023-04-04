@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 @Slf4j
 @RestController
-@RequestMapping("/user/v1")
+@RequestMapping("/api/user/v1")
 public class UserProfileController {
 
     private final UserProfileServiceImpl userProfileService;
@@ -67,6 +68,17 @@ public class UserProfileController {
                 .timestamp(LocalDateTime.now())
                 .data(Map.of("user", user))
                 .message("User updated successfully")
+                .status(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build());
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public Mono<Response<Boolean>> deleteUser(@PathVariable Long id) {
+        return userProfileService.deleteUser(id)
+            .map(deleted -> Response.<Boolean>builder()
+                .timestamp(LocalDateTime.now())
+                .data(Map.of("Deleted:", deleted))
                 .status(HttpStatus.OK)
                 .statusCode(HttpStatus.OK.value())
                 .build());
